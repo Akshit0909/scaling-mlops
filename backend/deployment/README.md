@@ -1,36 +1,266 @@
-## 5. Deploying Machine Learning Models
+# Summary
 
-> Note: in the videos we use Python 3.8. But you
-> should use Python 3.9
-
-- 5.1 [Intro / Session overview](01-intro.md)
-- 5.2 [Saving and loading the model](02-pickle.md)
-- 5.3 [Web services: introduction to Flask](03-flask-intro.md)
-- 5.4 [Serving the churn model with Flask](04-flask-deployment.md)
-- 5.5 [Python virtual environment: Pipenv](05-pipenv.md)
-- 5.6 [Environment management: Docker](06-docker.md)
-- 5.7 [Deployment to the cloud: AWS Elastic Beanstalk (optional)](07-aws-eb.md)
-- 5.8 [Summary](08-summary.md)
-- 5.9 [Explore more](09-explore-more.md)
-- 5.10 [Homework](homework.md)
+- How to save the model and load it to re-use it without running the previous code.
+- How to deploy the model in a web service.
+- How to create a virtual environment.
+- How to create a container and run our code in any operating systems.
+- How to implement our code in a public web service and aceess it from outside a local computer.
 
 
-## Community notes
+# Intro
 
-Did you take notes? You can share them here (or in each unit separately)
+If we want to use the model to predict new values without running the code, There's a way to do this. The way to use the model in different machines without running the code, is to deploy the model in a server (run the code and make the model). After deploying the code in a machine used as server we can make some endpoints (using api's) to connect from another machine to the server and predict values.
 
-* [Notes from Alvaro Navas](https://github.com/ziritrion/ml-zoomcamp/blob/main/notes/05a_deployment.md)
-* [Docker notes](https://github.com/ayoub-berdeddouch/mlbookcamp-homeworks/blob/main/Deployment/README.md)
-* [Notes from froukje](https://github.com/froukje/ml-zoomcamp/blob/main/week5/lecture/Lecture_5_deploying_ml_models.ipynb)
-* [WSL + Docker notes](https://github.com/MemoonaTahira/MLZoomcamp2022/blob/main/Notes/Week_5-flask_and_docker_for_deployment/readme.md)
-* [Notes from Hareesh Tummala](https://github.com/tummala-hareesh/ml_zoomcamp_ht/blob/main/notes/week-5-notes.md)
-* Add your notes here
+To deploy the model in a server there are some steps:
+- After training the model save it, to use it for making predictions in future (session 02-pickle).
+- Make the API endpoints in order to request predictions. (session 03-flask-intro and 04-flask-deployment)
+- Some other server deployment options (sessions 5 to 9)
 
-### Deployment tutorials
+# Pickle
 
-* [Using PythonAnywhere to host your Python Web App for free!!! (an an alternative to AWS/Azure/Google cloud)](https://github.com/nindate/ml-zoomcamp-exercises/blob/main/how-to-use-pythonanywhere.md)
-* [Deploy Churn Service on Heroku](https://github.com/razekmaiden/churn_service_heroku.git)
-* [Installing and using pipenv and Docker on Intel Macs](https://github.com/ziritrion/ml-zoomcamp/blob/main/notes/05b_virtenvs.md)
-* [Azure Guide](https://github.com/yusyel/guides/tree/master/azure#1-creating-azure-account)
-* Add your tutorials here
+## **"How to use the model in future without training and evaluating the code"**
+- To save the model we made before there is an option using the pickle library:
+  - First install the library with the command ```pip install pickle-mixin``` if you don't have it.
+  - After training the model and being the model ready for prediction process use this code to save the model for later.
+  - ```
+    import pickle
+    with open('model.bin', 'wb') as f_out:
+       pickle.dump((dcit_vectorizer, model), f_out)
+    f_out.close() ## After opening any file it's nessecery to close it
+      ```
+  - In the code above we'll making a binary file named model.bin and writing the dict_vectorizer for one hot encoding and model as array in it. (We will save it as binary in case it wouldn't be readable by humans)
+  - To be able to use the model in future without running the code, We need to open the binary file we saved before.
+  - ```
+    with open('mode.bin', 'rb') as f_in:  ## Note that never open a binary file you do not trust!
+        dict_vectorizer, model = pickle.load(f_in)
+    f_in.close()
+     ```
+   - With unpacking the model and the dict_vectorizer, We're able to again predict for new input values without training a new model by re-running the code.
+  
+# Flask
+
+- What is actually a web service
+  - A web service is a method used to communicate between electronic devices.
+  - There are some methods in web services we can use it to satisfy our problems. Here below we would list some.
+    - **GET:**  GET is a method used to retrieve files, For example when we are searching for a cat image in google we are actually requesting cat images with GET method.
+    - **POST:** POST is the second common method used in web services. For example in a sign up process, when we are submiting our name, username, passwords, etc we are posting our data to a server that is using the web service. (Note that there is no specification where the data goes)
+    -  **PUT:** PUT is same as POST but we are specifying where the data is going to.
+    -  **DELETE:** DELETE is a method that is used to request to delete some data from the server.
+    -  For more information just google the HTTP methods, You'll find useful information about this.
+- To create a simple web service, there are plenty libraries available in every language. Here we would like to introduce Flask library in python.
+  - If you haven't installed the library just try installing it with the code ```pip install Flask```
+  - To create a simple web service just run the code below:
+  - ```
+    from flask import Flask
+    app = Flask('churn-app') # give an identity to your web service
+    @app.route('/ping',methods=[GET])
+    def ping():
+        return 'PONG'
+    
+    if __name__=='__main__':
+       app.run('debug=True, host='0.0.0.0', port=9696) # run the code in local machine with the debugging mode true and port 9696
+    ```
+   - With the code above we made a simple web server and created a route named ping that would send pong string.
+   - To test it just open your browser and search ```localhost:9696/ping```, You'll see that the 'PONG' string is received. Congrats You've made a simple web server 🥳.
+- To use our web server to predict new values we must modify it. See how in the next session. 
+
+
+## **Implementing the functionality of prediction to our churn web service and how to make it usable in development environment.**
+- To make the web service predict the churn value for each customer we must modify the code in session 3 with the code we had in previous chapters. Below we can see how the code works in order to predict the churn value.
+- In order to predict we need to first load the previous saved model and use a prediction function in a special route.
+  - To load the previous saved model we use the code below:
+  - ```
+    import pickle
+    
+    with open('churn-model.bin', 'rb') as f_in:
+      dv, model = pickle.load(f_in)
+    ```
+  - As we had earlier to predict a value for a customer we need a function like below:
+  - ```
+    def predict_single(customer, dv, model):
+      X = dv.transform([customer])  ## apply the one-hot encoding feature to the customer data 
+      y_pred = model.predict_proba(X)[:, 1]
+      return y_pred[0]
+    ```
+   - Then at last we make the final function used for creating the web service.
+   - ```
+     @app.route('/predict', methods=['POST'])  ## in order to send the customer information we need to post its data.
+     def predict():
+     customer = request.get_json()  ## web services work best with json frame, So after the user post its data in json format we need to access the body of json.
+
+     prediction = predict_single(customer, dv, model)
+     churn = prediction >= 0.5
+     
+     result = {
+         'churn_probability': float(prediction), ## we need to conver numpy data into python data in flask framework
+         'churn': bool(churn),  ## same as the line above, converting the data using bool method
+     }
+
+     return jsonify(result)  ## send back the data in json format to the user
+     ```
+   - The whole code above is available in this link: [churn_serving.py](https://github.com/alexeygrigorev/mlbookcamp-code/blob/master/chapter-05-deployment/churn_serving.py)
+   - At last run your code. To see the result can't use a simple request in web browser. We can run the code below to post a new user data and see the response
+   - ```     
+     ## a new customer informations
+     customer = {
+       'customerid': '8879-zkjof',
+       'gender': 'female',
+       'seniorcitizen': 0,
+       'partner': 'no',
+       'dependents': 'no',
+       'tenure': 41,
+       'phoneservice': 'yes',
+       'multiplelines': 'no',
+       'internetservice': 'dsl',
+       'onlinesecurity': 'yes',
+       'onlinebackup': 'no',
+       'deviceprotection': 'yes',
+       'techsupport': 'yes',
+       'streamingtv': 'yes',
+       'streamingmovies': 'yes',
+       'contract': 'one_year',
+       'paperlessbilling': 'yes',
+       'paymentmethod': 'bank_transfer_(automatic)',
+       'monthlycharges': 79.85,
+       'totalcharges': 3320.75
+     }
+     import requests ## to use the POST method we use a library named requests
+     url = 'http://localhost:9696/predict' ## this is the route we made for prediction
+     response = requests.post(url, json=customer) ## post the customer information in json format
+     result = response.json() ## get the server response
+     print(result)
+     ```
+ - Until here we saw how we made a simple web server that predicts the churn value for every user. When you run your app you will see a warning that it is not a WGSI server and not suitable for production environmnets. To fix this issue and run this as a production server there are plenty of ways available. 
+   - One way to create a WSGI server is to use gunicorn. To install it use the command ```pip install gunicorn```, And to run the WGSI server you can simply run it with the   command ```gunicorn --bind 0.0.0.0:9696 churn:app```. Note that in __churn:app__ the name churn is the name we set for our the file containing the code ```app = Flask('churn')```(for example: churn.py), You may need to change it to whatever you named your Flask app file.  
+   -  Windows users may not be able to use gunicorn library because windows system do not support some dependecies of the library. So to be able to run this on a windows   machine, there is an alternative library waitress and to install it just use the command ```pip install waitress```. 
+   -  to run the waitress wgsi server use the command ```waitress-serve --listen=0.0.0.0:9696 churn:app```.
+   -  To test it just you can run the code above and the results is the same.
+ - So until here you were able to make a production server that predict the churn value for new customers. In the next session we can see how to solve library version conflictions in each machine and manage the dependencies for production environments.
+
+
+# Pipenv
+
+In this session we're going to make virtual environment for our project. So Let's start this session to get to know what is a virtual environment and how to make it.
+- Every time we're running a file from a directory we're using the executive files from a global directory. For example when we install python on our machine the executable files that are able to run our codes will go to somewhere like _/home/username/python/bin/_ for example the pip command may go to _/home/username/python/bin/pip_.
+- Sometimes the versions of libraries conflict (the project may not run or get into massive errors). For example we have an old project that uses sklearn library with the version of 0.24.1 and now we want to run it using sklearn version 1.0.0. We may get into errors because of the version conflict.
+   - To solve the conflict we can make virtual environments. Virtual environment is something that can seperate the libraries installed in our system and the libraries with specified version we want our project to run with. There are a lot of ways to create a virtual environments. One way we are going to use is using a library named pipenv.
+   - pipenv is a library that can create a virutal environment. To install this library just use the classic method ```pip install pipenv```.
+   - After installing pipenv we must to install the libraries we want for our project in the new virtual environment. It's really easy, Just use the command pipenv instead of pip. ```pipenv install numpy sklearn==0.24.1 flask```. With this command we installed the libraries we want for our project.
+   - Note that using the pipenv command we made two files named _Pipfile_ and _Pipfile.lock_. If we look at this files closely we can see that in Pipfile the libraries we installed are named. If we specified the library name, it's also specified in Pipfile.
+   - In _Pipfile.lock_ we can see that each library with it's installed version is named and a hash file is there to reproduce if we move the environment to another machine.
+   - If we want to run the project in another machine, we can easily installed the libraries we want with the command ```pipenv install```. This command will look into _Pipfile_ and _Pipfile.lock_ to install the libraries with specified version.
+   - After installing the required libraries we can run the project in the virtual environment with ```pipenv shell``` command. This will go to the virtual environment's shell and then any command we execute will use the virtual environment's libraries.
+- Installing and using the libraries such as gunicorn is the same as the last session.
+- Until here we made a virtual environment for our libraries with a required specified version. To seperate this environment more, such as making gunicorn be able to run in windows machines we need another way. The other way is using Docker. Docker allows us to seperate everything more than before and make any project able to run on any machine that support Docker smoothly.
+- In the next session we'll go in detail of how Docker works and how to use it.
+
+# Docker
+
+To isolate more our project file from our system machine, there is an option named Docker. With Docker you are able to pack all your project is a system that you want and run it in any system machine. For example if you want Ubuntu 20.4 you can have it in a mac or windows machine or other operating systems. <br>
+To get started with Docker for the churn prediction project you can follow the instructions below.
+
+
+
+### Ubuntu 
+
+```bash
+sudo apt-get install docker.io
+```
+
+To run docker without `sudo`, follow [this instruction](https://docs.docker.com/engine/install/linux-postinstall/).
+
+### Windows
+
+To install the Docker you can just follow the instruction by Andrew Lock in this link: https://andrewlock.net/installing-docker-desktop-for-windows/
+
+### MacOS
+
+Follow the steps in the [Docker docs](https://docs.docker.com/desktop/install/mac-install/).
+
+
+## Notes
+
+- Once our project was packed in a Docker container, we're able to run our project on any machine.
+- First we have to make a Docker image. In Docker image file there are settings and dependecies we have in our project. To find Docker images that you need you can simply search the [Docker](https://hub.docker.com/search?type=image) website.
+
+Here a Dockerfile (There should be no comments in Dockerfile, so remove the comments when you copy)
+
+```docker
+# First install the python 3.8, the slim version uses less space
+FROM python:3.8.12-slim
+
+# Install pipenv library in Docker 
+RUN pip install pipenv
+
+# create a directory in Docker named app and we're using it as work directory 
+WORKDIR /app                                                                
+
+# Copy the Pip files into our working derectory 
+COPY ["Pipfile", "Pipfile.lock", "./"]
+
+# install the pipenv dependencies for the project and deploy them.
+RUN pipenv install --deploy --system
+
+# Copy any python files and the model we had to the working directory of Docker 
+COPY ["*.py", "churn-model.bin", "./"]
+
+# We need to expose the 9696 port because we're not able to communicate with Docker outside it
+EXPOSE 9696
+
+# If we run the Docker image, we want our churn app to be running
+ENTRYPOINT ["gunicorn", "--bind", "0.0.0.0:9696", "churn_serving:app"]
+```
+
+The flags `--deploy` and `--system` makes sure that we install the dependencies directly inside the Docker container without creating an additional virtual environment (which `pipenv` does by default). 
+
+If we don't put the last line `ENTRYPOINT`, we will be in a python shell.
+Note that for the entrypoint, we put our commands in double quotes.
+
+After creating the Dockerfile, we need to build it:
+
+```bash
+docker build -t churn-prediction .
+```
+
+To run it,  execute the command below:
+
+```bash
+docker run -it -p 9696:9696 churn-prediction:latest
+```
+
+Flag explanations: 
+
+- `-t`: is used for specifying the tag name "churn-prediction".
+- `-it`: in order for Docker to allow us access to the terminal.
+- `--rm`: allows us to remove the image from the system after we're done.  
+- `-p`: to map the 9696 port of the Docker to 9696 port of our machine. (first 9696 is the port number of our machine and the last one is Docker container port.)
+- `--entrypoint=bash`: After running Docker, we will now be able to communicate with the container using bash (as you would normally do with the Terminal). Default is `python`.
+
+# AWS EB
+
+* [Creating an account on AWS](https://mlbookcamp.com/article/aws)
+
+
+## Notes
+As we see how to deploy our apps in AWS Let's find it out how to deploy them in Heroku.
+#### Heroku
+Here we will learn how to deploy our apps in heroku instead of AWS.
+- First of all create your web service with flask. (example file: [churn_prediction.py](https://github.com/amindadgar/customer-churn-app/blob/main/churn_serving.py)
+- Then create a file named _requirements.txt_ and pass your dependencies there. Example:
+ ```
+ pickle
+ numpy
+ flask
+ gunicorn
+  ```
+- Create another file named _Procfile_ and add the app you want to be able to run there. Example:
+ ```
+web: gunicorn churn_serving:app
+  ```
+  Note that the churn_serving name in the box above is the name of the main python file we're going to be running.
+ - Create your heroku profile, Go to dashboard and the Deploy tab.
+ - Follow the instruction to Deploy using Heroku Git.
+ - Great, your app is now available from global universe.
+
+
 
