@@ -1,4 +1,4 @@
-# Scaling Mlops
+# Streaming at Scale- Mlops
 
 This project allows users to interact with a machine learning model through a web interface. It consists of a frontend built with React.js and a backend web service implemented with Flask, deployed on AWS EC2 using Docker containers. The machine learning model provides predictions based on user input.
 
