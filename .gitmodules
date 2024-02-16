@@ -1,0 +1,3 @@
+[submodule "scaling-mlops-webapp"]
+	path = scaling-mlops-webapp
+	url = https://github.com/Akshit0909/scaling-mlops-webapp.git
