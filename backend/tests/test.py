@@ -1,5 +1,5 @@
 import unittest
-from app import app
+from backend.deployment.code.predict import app
 
 class FlaskAppTestCase(unittest.TestCase):
 
