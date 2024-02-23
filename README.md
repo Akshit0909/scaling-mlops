@@ -4,7 +4,7 @@
 
 ## Introduction
 
-Streaming at Scale - MLOps is a project focused on deploying machine learning models at scale while addressing operational challenges such as dead letter queues, autoscaling, right fitting, and FILEIO issues. It provides a robust architecture for deploying and managing machine learning pipelines in production environments.
+Streaming at Scale - MLOps is dedicated to deploying machine learning models at scale while tackling operational hurdles like dead letter queues, autoscaling, right fitting, and FILEIO concerns. It presents a robust architecture for efficiently managing machine learning pipelines in production environments.
 
 ## Purpose of the Project
 
@@ -12,53 +12,66 @@ In the rapidly evolving landscape of AI, the advent of platforms like OpenAI has
 
 The core objective of this project transcends mere model creation; it is fundamentally about navigating the intricate challenges of deploying machine learning solutions at scale. By strategically focusing on addressing operational hurdles and meticulously sculpting architectural blueprints, the aim is to forge a robust and adaptable framework. This framework not only ensures the reliable deployment of machine learning models but also fosters scalability and sustainability in the face of evolving business demands.
 
-The commitment extends beyond the realm of theoretical prowess; the aspiration is to deliver a pragmatic solution that empowers individuals and organizations to harness the full potential of machine learning technology. Through relentless dedication to innovation and a keen understanding of industry best practices, the goal is to redefine the paradigm of machine learning deployment and usher in a new era of transformative capabilities.
+## Technical Details and MLOps Features
 
-## Technical Details
+### Cost Optimization
 
-### Dead Letter Queues (Lost Streaming Data)
+- #### Environment Configuration
+    AWS Elastic Beanstalk (EB) allows for defining environment configurations tailored to the application's requirements, optimizing resource allocation and avoiding over-provisioning.
 
-- Utilizes dead letter queues to capture and handle lost streaming data. Messages that fail to be processed are sent to a dead letter queue for analysis and troubleshooting.
+- #### Auto-Scaling
+    EB supports automatic scaling based on metrics like CPU utilization, ensuring optimal resource utilization and minimizing costs during peak and off-peak periods.
 
-### Autoscaling (Vertical and Horizontal)
+- #### Resource Tagging
+    AWS resource tagging enables effective cost tracking and allocation, allowing for accurate expense distribution across departments or projects.
 
-- Implements both vertical and horizontal autoscaling techniques to dynamically adjust computing resources based on workload demand. Vertical autoscaling involves increasing or decreasing EC2 instance sizes, while horizontal autoscaling adds or removes EC2 instances from the deployment.
+-   #### Cost Explorer Integration
+    Integration with AWS Cost Explorer provides detailed cost breakdowns for EB environments, facilitating analysis and identification of optimization opportunities.
 
-### Right Fitting (Optimizing Resource Allocation)
+### High Availability
 
-- Applies the concept of right fitting to optimize resource allocation at each step of the machine learning pipeline. By dynamically allocating resources based on workload characteristics, it ensures optimal performance and cost efficiency.
+- #### Multi-AZ Deployment
+    EB deploys applications across multiple Availability Zones (AZs), ensuring fault tolerance and high availability even in the event of AZ failures.
 
-### FILEIO (Handling Large Data Streams)
+- #### Load Balancing
+    Integration with Elastic Load Balancing (ELB) distributes incoming traffic across instances, automatically routing traffic away from unhealthy instances to maintain availability.
 
-- Proactively addresses FILEIO issues by monitoring data size and raising alerts when data exceeds predefined thresholds. This helps prevent performance degradation and runtime failures due to data size limitations.
+- #### Rolling Updates
+    Rolling updates during application deployment ensure continuous availability by gradually replacing instances with new versions, minimizing downtime for end users.
 
-### Model Persistence and Portability
-- **Artifact Storage**: Save both the preprocessor and trained model as pickle files, ensuring the encapsulation of the entire model pipeline for easy storage and retrieval.
-- **Portable Artifacts**: Dockerize the model artifacts along with the Flask web service, facilitating consistent deployment across different environments and platforms.
+### Security and Compliance
 
-### Scalable Deployment with Docker and Elastic Beanstalk
-- **Containerization**: Utilize Docker containers for packaging the Flask web service and associated model artifacts, ensuring consistent runtime environments and streamlined deployment processes.
-- **Elastic Beanstalk Integration**: Deploy the Dockerized application on AWS Elastic Beanstalk, enabling seamless scaling and management of resources based on demand.
+- #### HTTPS Support
+    EB enables HTTPS for applications, encrypting data transmission to enhance security and protect sensitive information from interception.
 
-### Real-Time Prediction and Result Display
-- **Predictive Analytics**: Enable users to receive real-time predictions from the machine learning model based on their submitted data, providing valuable insights and decision support.
-- **Result Visualization**: Display predicted results to users in an easily interpretable format, fostering user engagement and enhancing the utility of the application.
+- #### IAM Integration
+    Integration with AWS Identity and Access Management (IAM) allows for fine-grained access control, ensuring only authorized users can manage EB environments and access resources.
 
-### Continuous Integration and Deployment (CI/CD)
-- **Automated Pipelines**: Implement CI/CD pipelines to automate the testing, building, and deployment processes, ensuring rapid iteration and delivery of updates to the production environment.
-- **Version Control**: Utilize version control systems such as Git to track changes and manage collaborative development efforts, promoting code quality and reliability.
+- #### Compliance Certifications
+    By deploying on EB, inherit AWS's comprehensive compliance certifications (SOC 1/2/3, PCI DSS, HIPAA, GDPR), helping meet regulatory requirements and industry standards.
 
+- #### Security Patching
+    Automatic security patching by EB ensures underlying operating systems and runtime environments remain up-to-date, safeguarding against known vulnerabilities.
 
+### Docker Integration
 
-## Features
+- #### Containerization
+    The machine learning model and preprocessor are containerized using Docker, allowing for consistent and portable deployment across different environments.
 
-- **User-friendly Interface**: The frontend provides a simple and intuitive user interface for interacting with the machine learning model.
-  
-- **Backend Web Service**: The backend is built with Flask and is responsible for handling user requests, processing data, and returning predictions from the machine learning model.
-  
-- **Integration with Machine Learning Model**: The backend integrates with a machine learning model to provide predictions based on user input.
-  
-- **Form Submission**: Users can submit entries through a form on the frontend, and the backend returns predictions based on the input data.
+- #### Deployment in Elastic Beanstalk
+    The Docker containers are deployed in AWS Elastic Beanstalk, leveraging its management capabilities for scalable and reliable deployment.
+
+## Flow Overview
+
+The MLOps workflow initiates as the user interacts with the frontend interface, triggering a chain of technical processes. Upon form submission, the frontend application sends an HTTP POST request to the backend web service hosted on Elastic Beanstalk (EB), targeting port 80, the default HTTP port. This request is received by the EB environment, which serves as a load balancer distributing incoming traffic across multiple EC2 instances.
+
+At the backend level, the EB environment communicates with the Docker container housing the machine learning model. This communication involves fetching the model files and preprocessing components required for data transformation and prediction generation. The Docker container, configured to expose port 9696 to external traffic, listens for incoming requests from the EB environment.
+
+Upon receiving the request, the Docker container preprocesses the input data and passes it through the machine learning model for prediction generation. The model execution pipeline, encapsulated within the Docker container, leverages the computational resources of the EC2 instance to efficiently process the data and compute predictions.
+
+Once predictions are generated, the Docker container sends the results back to the EB environment over port 9696. The EB environment, acting as a reverse proxy, forwards the response to the frontend application via the original HTTP connection established by the user's form submission.
+
+Throughout this process, Elastic Beanstalk's auto-scaling mechanisms continuously monitor the workload on the backend environment. Metrics such as CPU utilization, request count, and response times are analyzed to dynamically adjust the number of EC2 instances hosting the backend service. This auto-scaling capability ensures that the infrastructure can efficiently handle fluctuations in demand, optimizing resource utilization and maintaining responsive performance.
 
 ## Project Structure
 
@@ -204,6 +217,12 @@ To run tests for the project, follow these steps:
   cd backend
   pytest
   ```
+
+## Next Steps or Idea Board
+
+- Convert this project into serverless compute
+- Include CI/CD
+- Automated Testing
 
 ## Contributing
 
